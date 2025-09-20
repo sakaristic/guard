@@ -124,6 +124,13 @@ def get_brightness():
 # System Monitoring
 # --------------------------
 
+from camera_status import check_camera_status
+
+@fastapi_app.get("/system/camera")
+async def camera_status():
+    """Get the status of connected cameras."""
+    return check_camera_status()
+
 def get_temperatures():
     try:
         # We know exact zones for Jetson:
@@ -767,26 +774,15 @@ async def disconnect_wifi():
 # Voice Chat
 # --------------------------
 
-from process_manager import voice_chat_manager
+from voice_chat import sio as voice_sio, app as voice_app
 
-@fastapi_app.post("/voice-chat/control")
-async def control_voice_chat(request: VoiceChatRequest):
-    if request.action == "start":
-        result = voice_chat_manager.start()
-        if result["status"] == "error":
-            raise HTTPException(status_code=500, detail=result["message"])
-        return result
-    elif request.action == "stop":
-        result = voice_chat_manager.stop()
-        if result["status"] == "error":
-            raise HTTPException(status_code=500, detail=result["message"])
-        return result
-    else:
-        raise HTTPException(status_code=400, detail="Invalid action. Use 'start' or 'stop'")
+# Mount the voice chat app
+fastapi_app.mount("/voice", voice_app)
 
 @fastapi_app.get("/voice-chat/status")
 async def voice_chat_status():
-    return voice_chat_manager.status()
+    """Check voice chat server status."""
+    return {"status": "ok", "message": "Voice chat server is running"}
 
 # --------------------------
 # Socket.IO

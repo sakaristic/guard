@@ -10,21 +10,23 @@ import { useNavigate } from "react-router-dom";
 import { socket } from "@/lib/socket";
 import { useToast } from "@/components/ui/use-toast";
 
-interface WifiStatus {
+interface CameraStatus {
   connected: boolean;
-  ssid: string | null;
-  signal: number | null;
-  error?: string;
-  status?: string;
+  status: string;
+  devices: Array<{
+    device: string;
+    active: boolean;
+    info: string;
+  }>;
 }
 
 const SystemStatus = () => {
   const [showQRModal, setShowQRModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [wifiStatus, setWifiStatus] = useState<WifiStatus | null>(null);
+  const [cameraStatus, setCameraStatus] = useState<CameraStatus | null>(null);
+  const [prevCameraState, setPrevCameraState] = useState<string>('');
   const [socketConnected, setSocketConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
-  const [retryCount, setRetryCount] = useState(0);
   const [cpuTemp, setCpuTemp] = useState<number | null>(null);
   const [gpuTemp, setGpuTemp] = useState<number | null>(null);
   const navigate = useNavigate();
@@ -51,58 +53,80 @@ const SystemStatus = () => {
       });
     };
 
-    const handleWifiStateChange = (data: { status: string, current_network: WifiStatus | null, timestamp: number }) => {
-      console.log('WiFi state change:', data);
-      setLastUpdate(data.timestamp * 1000); // Convert to milliseconds
-      
-      if (data.status === 'error') {
-        setWifiStatus(data.current_network);
-        toast({
-          title: "System Error",
-          description: data.current_network?.error || "Unknown error occurred",
-          variant: "destructive",
-          duration: 5000
+    const fetchCameraStatus = async () => {
+      try {
+        console.log("Fetching camera status...");
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+        const response = await fetch("http://localhost:5000/system/camera", {
+          signal: controller.signal
         });
-        return;
-      }
-      
-      if (data.current_network) {
-        setWifiStatus(data.current_network);
-        setRetryCount(0); // Reset retry count on successful update
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Camera status error response:", errorText);
+          throw new Error(`Server error: ${errorText}`);
+        }
+
+        const data = await response.json();
+        console.log("Camera status response:", data);
         
-        if (data.current_network.connected) {
+        // Determine the current state
+        const currentState = data.connected 
+          ? (data.status === "Active" ? "STREAMING" : "CONNECTED") 
+          : "DISCONNECTED";
+
+        // Only show notification if the state has changed
+        if (currentState !== prevCameraState) {
+          if (data.connected) {
+            if (data.status === "Active") {
+              toast({
+                title: "Camera Streaming",
+                description: `Camera is connected and streaming (${data.devices.length} devices)`,
+                duration: 3000
+              });
+            } else {
+              toast({
+                title: "Camera Connected",
+                description: "Camera is connected but not streaming",
+                variant: "warning",
+                duration: 3000
+              });
+            }
+          } else {
+            toast({
+              title: "Camera Disconnected",
+              description: "No camera devices found",
+              variant: "destructive",
+              duration: 5000
+            });
+          }
+          // Update the previous state
+          setPrevCameraState(currentState);
+        }
+        
+        // Update the camera status
+        setCameraStatus(data);
+        setLastUpdate(Date.now());
+      } catch (error) {
+        console.error("Error fetching camera status:", error);
+        // Don't show toast for timeout errors (too noisy)
+        if (error.name !== 'AbortError') {
           toast({
-            title: "WiFi Connected",
-            description: `Connected to ${data.current_network.ssid}`,
-            duration: 3000
-          });
-        } else if (data.current_network.error) {
-          toast({
-            title: "WiFi Error",
-            description: data.current_network.error,
+            title: "Camera Error",
+            description: error.message || "Failed to check camera status",
             variant: "destructive",
-            duration: null // Keep showing until resolved
+            duration: 5000
           });
         }
-      } else if (data.status === "off") {
-        setWifiStatus({
-          connected: false,
-          ssid: null,
-          signal: null,
-          status: "off"
-        });
-        toast({
-          title: "WiFi Disconnected",
-          description: "WiFi is turned off",
-          variant: "destructive",
-          duration: null // Keep showing until resolved
-        });
+        setCameraStatus(null);
       }
     };
 
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
-    socket.on("wifi_state_change", handleWifiStateChange);
 
     // Initial connection status
     setSocketConnected(socket.connected);
@@ -110,12 +134,9 @@ const SystemStatus = () => {
     // System temperature monitoring
     const fetchTemperatures = async () => {
       try {
-        console.log("Fetching temperatures..."); // Debug log
         const response = await fetch("http://localhost:5000/system/temperature");
-        console.log("Response status:", response.status); // Debug log
         if (!response.ok) throw new Error("Failed to fetch temperatures");
         const data = await response.json();
-        console.log("Temperature data received:", data); // Debug log
         setCpuTemp(data.cpu);
         setGpuTemp(data.gpu);
       } catch (error) {
@@ -123,31 +144,21 @@ const SystemStatus = () => {
       }
     };
 
+    // Fetch camera status initially and set up polling
+    fetchCameraStatus();
+    const cameraInterval = setInterval(fetchCameraStatus, 5000); // Update every 5 seconds
+
     // Set up temperature polling
     const tempInterval = setInterval(fetchTemperatures, 2000); // Update every 2 seconds
     fetchTemperatures(); // Initial fetch
 
-    // Initial WiFi status fetch
-    const fetchInitialStatus = async () => {
-      try {
-        const response = await fetch("/wifi/connection");
-        if (!response.ok) throw new Error("Failed to fetch WiFi status");
-        const data = await response.json();
-        setWifiStatus(data);
-      } catch (error) {
-        console.error("Error fetching initial WiFi status:", error);
-      }
-    };
-    
-    fetchInitialStatus();
-
     return () => {
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
-      socket.off("wifi_state_change", handleWifiStateChange);
       clearInterval(tempInterval);
+      clearInterval(cameraInterval);
     };
-  }, [toast]);
+  }, [toast, prevCameraState]);
 
   const handlePasswordSuccess = () => {
     setShowPassword(false);
@@ -234,17 +245,23 @@ const SystemStatus = () => {
           <Card className="p-6 text-center">
             <CardContent className="p-0">
               <div className="mb-4">
-                <div className={`text-xl font-bold ${wifiStatus?.connected ? 'text-success' : 'text-destructive'} mb-2`}>
-                  {wifiStatus?.connected ? 'CONNECTED' : 'DISCONNECTED'}
+                <div className={`text-xl font-bold ${
+                  cameraStatus?.connected 
+                    ? 'text-green-500'  // Bright green for connected
+                    : 'text-red-500'    // Red for disconnected
+                } mb-2`}>
+                  {cameraStatus?.connected 
+                    ? 'CONNECTED'
+                    : 'DISCONNECTED'
+                  }
                 </div>
-                {wifiStatus?.connected && wifiStatus.ssid && (
-                  <div className="text-sm text-muted-foreground">{wifiStatus.ssid}</div>
-                )}
-                {wifiStatus?.signal && (
-                  <div className="text-sm text-muted-foreground">Signal: {wifiStatus.signal}%</div>
-                )}
+                {cameraStatus?.devices.map((device, index) => (
+                  <div key={index} className="text-sm text-muted-foreground">
+                    {device.device}: {device.active ? 'Active' : 'Inactive'}
+                  </div>
+                ))}
               </div>
-              <p className="text-muted-foreground font-bold">WIFI STATUS</p>
+              <p className="text-muted-foreground font-bold">CAMERA STATUS</p>
             </CardContent>
           </Card>
           

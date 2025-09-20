@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { MicOff, Volume2, Mic } from "lucide-react";
+import { voiceChat } from "@/lib/voiceChat";
+import { socket } from "@/lib/socket";
  
 const TalkButton = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -10,45 +12,45 @@ const TalkButton = () => {
   const [connectionStatus, setConnectionStatus] = useState('Checking...');
   const [lastConnectionAttempt, setLastConnectionAttempt] = useState('Never');
  
-  // Check connection to main dashboard
+  // Check connection to backend server
   const checkConnection = async () => {
     setLastConnectionAttempt(new Date().toLocaleTimeString());
     setConnectionStatus('Testing...');
     
     try {
-      // First try the main dashboard IP
-      const response = await fetch('http://192.168.0.206:3004/api/ping', {
+      // Check local backend connection
+      const response = await fetch('http://localhost:5000/voice-chat/status', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
+
       if (response.ok) {
         setIsConnected(true);
-        setConnectionStatus('✅ Connected to 192.168.0.206:3004');
+        setConnectionStatus('✅ Connected to voice chat server');
         return true;
       } else {
-        setConnectionStatus(`❌ 192.168.0.206:3004 responded with ${response.status}`);
+        const error = await response.text();
+        setConnectionStatus(`❌ Server error: ${error}`);
       }
     } catch (error) {
-      setConnectionStatus(`❌ 192.168.0.206:3004 - ${error.message}`);
-      console.log('Failed to connect to 192.168.0.206:3004, trying localhost:', error);
-    }
- 
-    try {
-      // Fallback: try localhost (if both are running on same machine for testing)
-      const response = await fetch('http://localhost:3004/api/ping', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (response.ok) {
-        setIsConnected(true);
-        setConnectionStatus('✅ Connected to localhost:3004');
-        return true;
-      } else {
-        setConnectionStatus(`❌ Both servers failed. localhost:3004 responded with ${response.status}`);
+      console.error('Connection check failed:', error);
+      setConnectionStatus(`❌ Connection failed - ${error.message}`);
+
+      // Try alternative localhost URL
+      try {
+        const altResponse = await fetch('http://127.0.0.1:5000/voice-chat/status', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (altResponse.ok) {
+          setIsConnected(true);
+          setConnectionStatus('✅ Connected to voice chat server (127.0.0.1)');
+          return true;
+        }
+      } catch (altError) {
+        console.error('Alternative connection check failed:', altError);
       }
-    } catch (error) {
-      setConnectionStatus(`❌ Both servers failed. localhost:3004 - ${error.message}`);
-      console.log('Failed to connect to localhost:3004:', error);
     }
  
     setIsConnected(false);
@@ -57,67 +59,43 @@ const TalkButton = () => {
  
   // Toggle microphone mute/unmute
   const handleMicToggle = async () => {
+    if (!isConnected) {
+      alert('Cannot activate microphone: Not connected to the server');
+      return;
+    }
+
     setIsMuting(true);
     try {
-      const credentials = {
-        host: window.location.hostname || '192.168.0.101',
-        username: 'jetson',
-        password: sessionStorage.getItem('jetsonPassword') || prompt('Enter Jetson password:')
-      };
- 
-      if (!credentials.password) {
-        setIsMuting(false);
-        return;
+      // First check if socket is connected
+      if (!voiceChat.isSocketConnected()) {
+        console.log('Socket not connected, attempting to reconnect...');
+        socket.connect();
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for connection
       }
- 
-      // Store password temporarily for this session
-      sessionStorage.setItem('jetsonPassword', credentials.password);
- 
-      const action = isMicMuted ? 'unmute' : 'mute';
-      
-      // Try multiple server URLs
-      const serverUrls = [
-        'http://192.168.0.206:3004',
-        'http://localhost:3004'
-      ];
- 
-      let success = false;
-      let lastError = null;
- 
-      for (const serverUrl of serverUrls) {
-        try {
-          const response = await fetch(`${serverUrl}/voip/mic-control`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              ...credentials,
-              action: action
-            })
-          });
- 
-          if (response.ok) {
-            const result = await response.json();
-            setIsMicMuted(!isMicMuted);
-            setIsConnected(true); // Update connection status
-            console.log(`✅ Microphone ${action}d successfully via ${serverUrl}`);
-            success = true;
-            break;
-          } else {
-            const error = await response.json();
-            lastError = error.error;
-          }
-        } catch (error) {
-          lastError = error.message;
-          console.log(`Failed to connect to ${serverUrl}:`, error);
+
+      if (isMicMuted) {
+        // Turn ON: Red -> Green
+        console.log('Turning microphone ON');
+        const success = await voiceChat.startVoiceChat();
+        if (success) {
+          setIsMicMuted(false);
+          voiceChat.startTransmitting();
+          console.log('✅ Voice chat started successfully');
+        } else {
+          throw new Error('Failed to start voice chat');
         }
-      }
- 
-      if (!success) {
-        alert(`❌ Failed to ${action} microphone: ${lastError}`);
+      } else {
+        // Turn OFF: Green -> Red
+        console.log('Turning microphone OFF');
+        voiceChat.stopTransmitting();
+        voiceChat.stopVoiceChat();
+        setIsMicMuted(true);
+        console.log('✅ Voice chat stopped successfully');
       }
     } catch (error) {
-      console.error('Failed to toggle microphone:', error);
-      alert('❌ Failed to control microphone. Check console for details.');
+      console.error('Failed to toggle voice chat:', error);
+      setIsMicMuted(true); // Ensure mic is marked as off on error
+      alert('❌ Failed to control microphone: ' + (error.message || 'Unknown error'));
     } finally {
       setIsMuting(false);
     }
@@ -164,35 +142,72 @@ const TalkButton = () => {
     }
   };
  
-  // Check connection on component mount
+  // Check connection and socket status on component mount
   useEffect(() => {
-    checkConnection();
+    const checkConnectionAndSocket = async () => {
+      const connectionOk = await checkConnection();
+      if (connectionOk && !voiceChat.isSocketConnected()) {
+        console.log('Reconnecting voice chat socket...');
+        socket.connect();
+      }
+    };
+
+    checkConnectionAndSocket();
     // Check connection every 5 seconds
-    const interval = setInterval(checkConnection, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    const interval = setInterval(checkConnectionAndSocket, 5000);
+    
+    // Stop voice chat if connection is lost
+    if (!isConnected) {
+      voiceChat.stopTransmitting();
+      voiceChat.stopVoiceChat();
+      setIsMicMuted(true);
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      clearInterval(interval);
+      voiceChat.stopTransmitting();
+      voiceChat.stopVoiceChat();
+    }
+  }, [isConnected]);
  
   return (
     <div className="flex flex-col items-center justify-center py-12 space-y-4">
       <Button
         size="lg"
-        disabled={true}
-        className="w-64 h-64 rounded-full text-white text-xl font-bold shadow-2xl bg-green-600 cursor-default flex flex-col items-center justify-center gap-2"
+        onClick={handleMicToggle}
+        disabled={isMuting || !isConnected}
+        className={`w-64 h-64 rounded-full text-white text-xl font-bold shadow-2xl ${
+          !isConnected 
+            ? 'bg-gray-400 cursor-not-allowed'
+            : isMicMuted 
+              ? 'bg-red-600 hover:bg-red-700' 
+              : 'bg-green-600 hover:bg-green-700'
+        } transition-colors duration-300 flex flex-col items-center justify-center gap-2`}
       >
-        <Volume2 className="h-8 w-8" />
-        LISTENING<br />MODE
+        {isMicMuted ? (
+          <>
+            <MicOff className="h-8 w-8" />
+            MIC OFF
+          </>
+        ) : (
+          <>
+            <Mic className="h-8 w-8" />
+            MIC ON
+          </>
+        )}
       </Button>
       
       {/* Connection Status */}
       <div className={`text-sm font-medium ${isConnected ? 'text-green-500' : 'text-red-500'}`}>
-        {isConnected ? '🟢 Connected to Main Dashboard' : '🔴 Main Dashboard Connection Failed'}
+        {isConnected ? '🟢 Voice Chat Server Connected' : '🔴 Voice Chat Server Connection Failed'}
       </div>
       
       {/* Manual Connection Test */}
       {!isConnected && (
         <div className="text-xs text-center space-y-2">
           <div className="text-orange-600">
-            Auto-connection failed. Click "Test Connection" or try mic button anyway.
+            Connection failed. Make sure the backend server is running on port 5000.
           </div>
           <Button
             variant="outline"
@@ -202,6 +217,18 @@ const TalkButton = () => {
           >
             Test Connection
           </Button>
+        </div>
+      )}
+      
+      {/* Voice Chat Status */}
+      {isConnected && (
+        <div className="text-xs text-center space-y-1">
+          <div className="text-blue-600">
+            Voice chat server ready
+          </div>
+          <div className="text-gray-600">
+            Click the button to toggle microphone
+          </div>
         </div>
       )}
       
@@ -219,36 +246,9 @@ const TalkButton = () => {
         </div>
       </div>
       
-      {/* Microphone Control Button */}
-      <div className="flex flex-col items-center space-y-2">
-        <Button
-          variant={isMicMuted ? "default" : "destructive"}
-          size="sm"
-          onClick={handleMicToggle}
-          disabled={isMuting}
-          className={`w-40 text-sm font-medium transition-all duration-200 ${
-            isMuting ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
-          }`}
-        >
-          {isMuting ? (
-            "Processing..."
-          ) : isMicMuted ? (
-            <>
-              <Mic className="h-4 w-4 mr-2" />
-              Unmute Mic
-            </>
-          ) : (
-            <>
-              <MicOff className="h-4 w-4 mr-2" />
-              Mute Mic
-            </>
-          )}
-        </Button>
-        
-        {/* Usage Tip */}
-        <div className="text-xs text-blue-600 text-center">
-          Button will try multiple server addresses automatically
-        </div>
+      {/* Usage Tip */}
+      <div className="text-xs text-blue-600 text-center">
+        Click the button to toggle microphone
       </div>
       
       {/* Mode Information */}

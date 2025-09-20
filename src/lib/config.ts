@@ -1,4 +1,4 @@
-// API configuration
+// Configuration
 export const API_URL = 'http://127.0.0.1:5000';
 export const WS_URL = 'ws://127.0.0.1:5000';
 
@@ -11,3 +11,10 @@ export const getFrontendURL = () => {
 export const getAPIURL = (endpoint: string) => {
     return `${API_URL}${endpoint}`;
 };
+
+// Get configuration
+export const getConfig = () => ({
+    backendUrl: API_URL,
+    wsUrl: WS_URL,
+    frontendUrl: getFrontendURL(),
+});
