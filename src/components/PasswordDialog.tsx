@@ -25,29 +25,27 @@ const PasswordDialog = ({ open, onClose, onSuccess }: PasswordDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md mx-auto bg-card p-8 rounded-lg">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-foreground">ENTER PASSWORD</h2>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="w-5 h-5" />
-          </Button>
+      <DialogContent className="max-w-lg mx-auto bg-card p-10 rounded-xl">
+        <div className="flex items-center justify-center mb-8">
+          <h2 className="text-2xl font-bold text-foreground">ENTER PASSWORD</h2>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
           <Input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="flex-1 text-center text-lg"
+            className="flex-1 text-center text-2xl py-6"
             placeholder="- - - -"
             maxLength={4}
             onKeyPress={(e) => e.key === "Enter" && handleSubmit()}
           />
           <Button
             onClick={handleSubmit}
-            className="bg-info hover:bg-info/90 text-white rounded-full p-3"
+            className="bg-info hover:bg-info/90 text-white rounded-full p-6"
+            size="lg"
           >
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight className="w-7 h-7" />
           </Button>
         </div>
       </DialogContent>

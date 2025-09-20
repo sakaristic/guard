@@ -10,6 +10,7 @@ import { API_URL } from "@/lib/config";
 type Network = {
   ssid: string;
   security: string;
+  known?: boolean;
 };
 
 const WiFiSettings = () => {
@@ -154,8 +155,11 @@ const WiFiSettings = () => {
     return () => clearInterval(interval);
   }, [isEnabled]);
 
+  const [rememberNetwork, setRememberNetwork] = useState(true);
+
   const handleConnect = async (network: Network) => {
-    if (network.security !== "--" && !password && showPasswordInput !== network.ssid) {
+    // If network is secured and not known, prompt for password
+    if (network.security !== "--" && !network.known && !password && showPasswordInput !== network.ssid) {
       setShowPasswordInput(network.ssid);
       return;
     }
@@ -169,6 +173,7 @@ const WiFiSettings = () => {
         body: JSON.stringify({
           ssid: network.ssid,
           password: network.security !== "--" ? password : null,
+          rememberNetwork: rememberNetwork, // Add remember network option
         }),
       });
 
@@ -338,23 +343,38 @@ const WiFiSettings = () => {
                   </div>
 
                   {/* Password Input */}
-                  {showPasswordInput === network.ssid && network.security !== "--" && (
+                  {showPasswordInput === network.ssid && network.security !== "--" && !network.known && (
                     <div className="ml-7 p-3 bg-gray-50 rounded-lg space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Password for {network.ssid}
-                        </label>
-                        <Input
-                          type="password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="Enter network password"
-                          onKeyPress={(e) => {
-                            if (e.key === "Enter") {
-                              handleConnect(network);
-                            }
-                          }}
-                        />
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Password for {network.ssid}
+                          </label>
+                          <Input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Enter network password"
+                            onKeyPress={(e) => {
+                              if (e.key === "Enter") {
+                                handleConnect(network);
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={rememberNetwork}
+                            onCheckedChange={setRememberNetwork}
+                            id={`remember-${network.ssid}`}
+                          />
+                          <label
+                            htmlFor={`remember-${network.ssid}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            Remember this network
+                          </label>
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <Button

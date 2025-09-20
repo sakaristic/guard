@@ -32,47 +32,47 @@ const Header = () => {
       {/* Left Section */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-primary rounded-sm"></div>
-          <div className="w-6 h-6 bg-primary rounded-sm"></div>
+          <div className="w-7 h-7 bg-primary rounded-sm"></div>
+          <div className="w-7 h-7 bg-primary rounded-sm"></div>
         </div>
         <div>
-          <h1 className="text-xl font-bold text-primary">Guard Controls</h1>
+          <h1 className="text-2xl font-bold text-primary">Guard Controls</h1>
           <p className="text-sm text-muted-foreground">Sakar Robotics</p>
         </div>
       </div>
 
       {/* Date & Time in Center */}
-      <div className="px-4 py-2 bg-muted rounded-lg text-center">
-        <div className="text-xs font-semibold text-muted-foreground">
+      <div className="px-5 py-2 bg-muted rounded-lg text-center">
+        <div className="text-sm font-semibold text-muted-foreground">
           {formattedDate}
         </div>
-        <div className="text-xl font-bold text-foreground">
+        <div className="text-2xl font-bold text-foreground">
           {formattedTime.toUpperCase()}
         </div>
       </div>
 
       {/* Right Section */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-1 px-2 py-1 bg-success/20 rounded-full">
-          <Circle className="w-2 h-2 fill-success text-success" />
-          <span className="text-xs text-success font-medium">ONLINE</span>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-success/20 rounded-full">
+          <Circle className="w-4 h-4 fill-success text-success" />
+          <span className="text-base text-success font-medium">ONLINE</span>
         </div>
 
-        <div className="flex items-center gap-1 px-2 py-1 bg-info/20 rounded-full">
-          <Signal className="w-4 h-4 text-info" />
+        <div className="flex items-center gap-2 px-4 py-2 bg-info/20 rounded-full">
+          <Signal className="w-7 h-7 text-info" />
           <div className="flex gap-1">
             
           </div>
         </div>
 
-        <div className="flex items-center gap-1 px-2 py-1 bg-warning/20 rounded-full">
-          <Battery className="w-4 h-4 text-warning" />
-          <span className="text-xs text-warning font-medium">80% PWR</span>
+        <div className="flex items-center gap-2 px-4 py-2 bg-warning/20 rounded-full">
+          <Battery className="w-7 h-7 text-warning" />
+          <span className="text-base text-warning font-medium">80% PWR</span>
         </div>
 
-        <div className="flex items-center gap-1 px-2 py-1 bg-destructive/20 rounded-full">
-          <Circle className="w-2 h-2 fill-destructive text-destructive" />
-          <span className="text-xs text-destructive font-medium">RECORDING</span>
+        <div className="flex items-center gap-2 px-4 py-2 bg-destructive/20 rounded-full">
+          <Circle className="w-4 h-4 fill-destructive text-destructive" />
+          <span className="text-sm text-destructive font-medium">RECORDING</span>
         </div>
       </div>
     </header>

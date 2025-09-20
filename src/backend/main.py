@@ -168,6 +168,7 @@ async def system_temperature():
 class WifiConnectRequest(BaseModel):
     ssid: str
     password: str | None = None
+    rememberNetwork: bool = True
 
 @fastapi_app.get("/wifi/scan")
 def wifi_scan():
@@ -187,28 +188,54 @@ def wifi_scan():
         
         networks = []
         current = current_wifi()
-        
+        # Get list of known/saved connections
+        known_connections = set()
+        try:
+            known_result = subprocess.run([
+                "nmcli", "-t", "-f", "NAME,TYPE", "connection", "show"
+            ], capture_output=True, text=True, check=True)
+            for line in known_result.stdout.strip().split('\n'):
+                if line:
+                    name, typ = line.split(":", 1)
+                    if typ == "802-11-wireless":
+                        known_connections.add(name)
+        except Exception as e:
+            print(f"Error getting known connections: {e}")
         for line in result.stdout.strip().split('\n'):
             if line:
                 parts = line.split(":")
                 if len(parts) >= 2:
                     ssid = parts[0].strip()
                     security = parts[1] if parts[1] else "--"
-                    
                     if ssid:  # skip empty SSID rows
                         network = {
                             "ssid": ssid,
-                            "security": security
+                            "security": security,
+                            "known": ssid in known_connections
                         }
                         # Mark if this is the current network
                         if current.get("connected") and current.get("ssid") == ssid:
                             network["connected"] = True
                         networks.append(network)
-                        
         return {"networks": networks, "status": "on"}
     except Exception as e:
         print(f"Scan error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Helper function to run commands with sudo (no password required)
+def run_sudo_command(cmd):
+    try:
+        sudo_cmd = ["sudo", "-n"] + cmd  # -n flag for non-interactive mode
+        process = subprocess.run(
+            sudo_cmd,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return process.stdout
+    except Exception as e:
+        print(f"Failed to run sudo command: {e}")
+        raise
 
 def ensure_network_manager():
     """Ensure NetworkManager is running and responding"""
@@ -359,7 +386,13 @@ def wifi_status():
         )
         
         if nm_status.stdout.strip() != "active":
-            print("NetworkManager is not running")
+            print("NetworkManager is not running, attempting to start...")
+            try:
+                run_sudo_command(["systemctl", "start", "NetworkManager"])
+                time.sleep(2)  # Give it time to start
+            except Exception as start_err:
+                print(f"Failed to start NetworkManager: {start_err}")
+                return {"status": "error", "reason": "NetworkManager failed to start"}
             try:
                 # Try to start NetworkManager
                 subprocess.run(["sudo", "systemctl", "start", "NetworkManager"], check=True)
@@ -472,8 +505,15 @@ async def toggle_wifi(req: ToggleRequest):
 
             await asyncio.sleep(1)
 
-            # First, use rfkill to block WiFi at hardware level
+                        # First, use rfkill to block WiFi at hardware level
             print("Blocking WiFi at hardware level...")
+            try:
+                run_sudo_command(["rfkill", "block", "wifi"])
+                # Then disable WiFi in NetworkManager
+                run_sudo_command(["nmcli", "radio", "wifi", "off"])
+            except Exception as block_err:
+                print(f"Error blocking WiFi: {block_err}")
+                raise HTTPException(status_code=500, detail=f"Failed to block WiFi: {str(block_err)}")
             subprocess.run(
                 ["sudo", "rfkill", "block", "wifi"],
                 capture_output=True,
@@ -490,8 +530,22 @@ async def toggle_wifi(req: ToggleRequest):
                 check=True
             )
 
-        else:  # req.state == "on"
-            # First unblock at hardware level
+        else:  # Turn WiFi on
+            print("Enabling WiFi...")
+            try:
+                # First unblock WiFi at hardware level
+                run_sudo_command(["rfkill", "unblock", "wifi"])
+                await asyncio.sleep(1)
+                
+                # Then enable WiFi in NetworkManager
+                run_sudo_command(["nmcli", "radio", "wifi", "on"])
+                await asyncio.sleep(2)
+                
+                # Ensure WiFi device is managed by NetworkManager
+                run_sudo_command(["nmcli", "device", "set", "wlan0", "managed", "yes"])
+            except Exception as enable_err:
+                print(f"Error enabling WiFi: {enable_err}")
+                raise HTTPException(status_code=500, detail=f"Failed to enable WiFi: {str(enable_err)}")
             print("Unblocking WiFi at hardware level...")
             subprocess.run(
                 ["sudo", "rfkill", "unblock", "wifi"],
@@ -584,12 +638,39 @@ async def connect_wifi(req: WifiConnectRequest):
         except subprocess.CalledProcessError as e:
             print(f"Warning: Failed to rescan networks: {str(e)}")
 
-        # Build the nmcli command based on whether a password is provided
-        if req.password:
-            cmd = ["nmcli", "device", "wifi", "connect", req.ssid, "password", req.password]
+        # Check if this is a known/saved network (no password required)
+        known_result = subprocess.run([
+            "nmcli", "-t", "-f", "NAME,TYPE", "connection", "show"
+        ], capture_output=True, text=True)
+        known_connections = set()
+        for line in known_result.stdout.strip().split('\n'):
+            if line:
+                name, typ = line.split(":", 1)
+                if typ == "802-11-wireless":
+                    known_connections.add(name)
+
+        if req.ssid in known_connections:
+            # Just bring up the saved connection, no password needed
+            cmd = ["nmcli", "connection", "up", req.ssid]
+        elif req.password:
+            if req.rememberNetwork:
+                # Save the connection for auto-connect
+                cmd = ["nmcli", "device", "wifi", "connect", req.ssid, 
+                      "password", req.password, 
+                      "private", "yes",  # Save only for this user
+                      "hidden", "no"]
+            else:
+                # Connect without saving
+                cmd = ["nmcli", "--ask", "device", "wifi", "connect", req.ssid,
+                      "password", req.password]
         else:
-            cmd = ["nmcli", "device", "wifi", "connect", req.ssid]
-            
+            if req.rememberNetwork:
+                cmd = ["nmcli", "device", "wifi", "connect", req.ssid,
+                      "private", "yes",
+                      "hidden", "no"]
+            else:
+                cmd = ["nmcli", "device", "wifi", "connect", req.ssid]
+
         result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode != 0:
