@@ -282,7 +282,7 @@ Robot Health:
         
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold">REPORT ISSUE</h3>
+            <h3 className="text-xl font-semibold">Report Issue</h3>
             <Button 
               variant="outline"
               onClick={() => setIsQROpen(true)}
@@ -293,7 +293,7 @@ Robot Health:
           <Accordion type="single" collapsible className="w-full">
             {Object.entries(issueTypes).map(([issue, description], index) => (
               <AccordionItem key={index} value={`issue-${index}`}>
-                <AccordionTrigger className="text-left font-bold">
+                <AccordionTrigger className="text-left font-bold text-lg">
                   {issue}
                 </AccordionTrigger>
                 <AccordionContent>

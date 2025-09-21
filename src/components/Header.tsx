@@ -30,15 +30,17 @@ const Header = () => {
   return (
     <header className="flex items-center justify-between w-full px-6 py-4 bg-card border-b border-border">
       {/* Left Section */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-primary rounded-sm"></div>
-          <div className="w-7 h-7 bg-primary rounded-sm"></div>
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-primary">Guard Controls</h1>
-          <p className="text-sm text-muted-foreground">Sakar Robotics</p>
-        </div>
+      <div className="flex items-center">
+        <img
+          src="/sakar (1).png"
+          alt="Sakar Logo Light"
+          className="h-12 object-contain block dark:hidden"
+        />
+        <img
+          src="/sakar-dark.png"
+          alt="Sakar Logo Dark"
+          className="h-12 object-contain hidden dark:block"
+        />
       </div>
 
       {/* Date & Time in Center */}
