@@ -9,7 +9,32 @@ const DEVICE_IP = "http://localhost:5000"; // Points to your own laptop
 
 const Display = () => {
   const [brightness, setBrightness] = useState([80]); // slider default
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+
+  // Handle auto theme switching
+  useEffect(() => {
+    if (theme !== "auto") return;
+
+    const updateTheme = () => {
+      const hour = new Date().getHours();
+      // Light mode between 6 AM and 6 PM
+      const preferredTheme = hour >= 6 && hour < 18 ? "light" : "dark";
+      document.documentElement.classList.remove("light", "dark");
+      document.documentElement.classList.add(preferredTheme);
+    };
+
+    updateTheme(); // Initial check
+    const interval = setInterval(updateTheme, 60000); // Check every minute
+
+    return () => {
+      clearInterval(interval);
+      // Restore theme when unmounting or changing from auto
+      if (resolvedTheme) {
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(resolvedTheme);
+      }
+    };
+  }, [theme, resolvedTheme]);
 
   const themeOptions = [
     { id: "auto", label: "AUTO", icon: Smartphone },
@@ -60,6 +85,7 @@ const Display = () => {
                 <Button
                   key={option.id}
                   variant={theme === option.id ? "default" : "outline"}
+                  aria-pressed={theme === option.id}
                   className="h-32 flex flex-col items-center justify-center gap-3 font-bold"
                   onClick={() => setTheme(option.id)}
                 >

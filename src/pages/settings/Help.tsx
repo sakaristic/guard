@@ -3,6 +3,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import { FAQSearch } from "@/components/FAQSearch";
 
 interface QROverlayProps {
   isOpen: boolean;
@@ -39,30 +40,193 @@ const QROverlay: React.FC<QROverlayProps> = ({ isOpen, onClose }) => {
 const Help = () => {
   const [isQROpen, setIsQROpen] = useState(false);
   
-    const helpSections = {
-    "Introduction": "Welcome to the Guard Surveillance Robot Control Dashboard. This advanced interface serves as your central command center for managing and monitoring the Guard robot system. The dashboard provides comprehensive control over surveillance operations, real-time communication capabilities, and detailed system monitoring. Whether you're conducting routine patrols or responding to security events, this interface puts all essential controls and information at your fingertips.",
+  const helpSections = {
+    "Introduction": "Guard is an intelligent surveillance robot built for real-time monitoring, security, and situational awareness. With advanced sensors, AI-powered vision, and autonomous mobility, Guard serves as a mobile security unit capable of detecting, analyzing, and reporting potential threats. \n This dedicated Guard Dashboard provides direct access to the robot’s operational status and system diagnostics. While the primary command center coordinates overall security operations, this interface gives you focused control and insights into Guard’s performance — ensuring reliable monitoring, quick response, and seamless integration into larger security workflows.",
     
-    "Getting Started / Basics": "The dashboard is designed with an intuitive layout featuring three main components: The Header Bar, Main Control Area, and Navigation Bar. The Header Bar displays critical system information including connection status, battery level, recording state, and system temperatures. The Main Control Area provides access to voice communications, patrol controls, and real-time video feeds. The Bottom Navigation Bar allows quick switching between different dashboard sections. Basic operations like initiating voice communication, starting patrols, and accessing settings are all available through clearly labeled buttons and controls.",
+    "Getting Started / Basics": "Let's get you started with the basics:\n\nStarting Your Day:\n- Make sure the robot is charged\n- Check if it's connected to WiFi\n- Look at the screen to see if everything is OK\n\nUsing The Robot:\n- Press buttons on screen to start patrols\n- Watch the camera feed to see what robot sees\n- Use the voice button to talk through robot\n\nIf Things Go Wrong:\n- Go to Settings > General and use the Reboot button\n- Make sure WiFi is working\n- Check if battery needs charging\n\nMost problems can be fixed with a quick reboot - just go to Settings > General section and click the Reboot button!",
     
-    "Dashboard Layout": "The interface is organized into distinct sections for efficient operation: \n\n1. Header Bar (Top): \n- Connection status indicator \n- Battery level display \n- Recording status \n- System temperature monitor \n- Quick access settings \n\n2. Main Control Area (Center): \n- Push-to-Talk controls \n- Live video feed \n- Patrol status and controls \n- System messages and alerts \n\n3. Navigation Bar (Bottom): \n- Main dashboard view \n- Settings access \n- System status page \n- Help section",
+    "Features & Controls": `Core System Capabilities:
+
+1. Security Monitoring
+   • Live threat detection
+   • Automated incident recording
+   • Instant alert notifications
+   • Real-time situation analysis
+   • Event history tracking
+
+2. Environment Awareness
+   • Area mapping system
+   • Obstacle detection
+   • Environmental conditions
+   • Lighting adaptation
+   • Movement tracking
+
+3. Communication System
+   • Voice Control (PTT)
+     - Press once to activate microphone
+     - Press again to deactivate
+     - LED status indicator shows active state
+     - Visual feedback on dashboard
+   • Audio Management
+     - Interactive volume control
+     - Microphone sensitivity adjustment
+     - Noise reduction settings
+     - Echo cancellation options
+   • Team Collaboration
+     - Multi-user access control
+     - Shift handover tools
+     - Team communication
+     - Activity logging
+
+4. Patrol Operation
+   • One-click patrol activation
+   • Pre-programmed route selection
+   • Real-time route modification
+   • Patrol speed adjustment
+   • Position tracking display
+
+5. Surveillance Tools
+   • HD video monitoring
+   • Night vision toggle
+   • Motion detection system
+   • Threat level indicators
+   • Automated recording
+
+6. Interactive Controls
+   • Simple directional controls
+   • Camera angle adjustment
+   • Zoom level selection
+   • Light intensity control
+   • Quick stop function`,
     
-    "Communication Features": "The Guard robot features advanced two-way communication capabilities: \n\n1. Push-to-Talk (PTT): \n- Press and hold to transmit voice \n- Release to listen \n- Visual feedback for transmission status \n- Volume control available \n\n2. Audio Settings: \n- Adjustable microphone sensitivity \n- Speaker volume control \n- Echo cancellation options \n- Audio quality indicators \n\n3. Emergency Communications: \n- Priority channel access \n- Emergency broadcast mode \n- Automatic alert system",
+
     
-    "Patrol & Surveillance": "Understanding patrol operations and surveillance features: \n\n1. Patrol Modes: \n- Automated patrols along predefined routes \n- Manual control mode for direct navigation \n- Hybrid mode with automated and manual control \n\n2. Surveillance Features: \n- Real-time video monitoring \n- Motion detection alerts \n- Area mapping and coverage display \n- Event logging and reporting \n\n3. Control Options: \n- Speed and direction controls \n- Camera pan/tilt/zoom \n- Light controls for low-light conditions \n- Emergency stop function",
+    "Settings & Configuration": `System Optimization Guide:
+
+1. Patrol Configuration
+   • Coverage area setup
+   • Patrol route planning
+   • Schedule management
+   • Alert threshold settings
+   • Response time targets
+
+2. Security Settings
+   • Detection sensitivity
+   • Recording preferences
+   • Alert criteria setup
+   • Access permissions
+   • Emergency protocols
+
+3. Performance Tuning
+   • Battery optimization
+   • Network prioritization
+   • Sensor calibration
+   • System backup plans
+   • Update management`,
+
+    "System Status & Maintenance": `System Health and Care Guide:
+
+1. System Status Overview
+Battery Life:
+   • Real-time charge level monitoring
+   • Charging status indicators
+   • Low battery warnings
+   • Power consumption tracking
+
+Network Connection:
+   • WiFi connection status
+   • Signal strength monitoring
+   • Communication capability
+   • Network health indicators
+
+Robot Health:
+   • System status monitoring
+   • Component health tracking
+   • Maintenance indicators
+   • Reboot requirements
+
+2. Daily Maintenance
+   • Physical inspection steps
+   • Sensor cleaning process
+   • Battery maintenance
+   • System checks routine
+   • Performance validation
+
+3. Software Management
+   • Update installation
+   • Version tracking
+   • Backup procedures
+   • Recovery options
+   • System optimization
+
+4. Long-term Care
+   • Preventive maintenance
+   • Component tracking
+   • Wear monitoring
+   • Service scheduling
+   • Health reports`,
     
-    "System Status Monitoring": "Comprehensive system monitoring includes: \n\n1. Power Management: \n- Battery level monitoring \n- Power consumption analysis \n- Charging status and estimates \n- Low battery alerts \n\n2. Network Connectivity: \n- Signal strength indicator \n- Network quality metrics \n- Connection type display \n- Bandwidth usage stats \n\n3. Hardware Status: \n- Motor health indicators \n- Camera system status \n- Sensor readings \n- Temperature monitoring",
+    "Troubleshooting Guide": "If you're having problems, try these simple fixes first:\n\nStep 1: Reboot the Robot\n- Go to Settings menu\n- Click on 'General' section\n- Find and click the 'Reboot' button\n- Wait for the robot to fully restart (about 2 minutes)\n\nStep 2: Check Basic Things\n- Make sure the robot has enough battery power\n- Check if you're connected to WiFi\n- Make sure nothing is blocking the robot's sensors\n\nStep 3: Still Having Problems?\n- Try the reboot button in Settings > General again\n- Contact support if problems continue\n\nRemember: Most problems can be fixed by using the Reboot button in the General section of Settings!",
     
-    "Settings & Configuration": "Detailed guide to system settings: \n\n1. Network Settings: \n- WiFi configuration \n- Connection priority \n- Network diagnostics \n- Remote access setup \n\n2. Audio Settings: \n- Input/Output selection \n- Volume controls \n- Audio processing options \n- Communication preferences \n\n3. Display Settings: \n- Interface themes \n- Brightness control \n- Information density \n- Alert preferences",
+    "Safety & Emergency": `Safety and Emergency Procedures:
+
+1. Emergency Response
+   • Immediate stop activation
+   • Emergency override controls
+   • Fail-safe engagement
+   • Alert system activation
+   • Quick evacuation paths
+
+2. Hazard Prevention
+   • Obstacle detection zones
+   • Collision avoidance
+   • Safety boundary setup
+   • Speed limit controls
+   • Area restriction rules
+
+3. Safety Monitoring
+   • Real-time status checks
+   • Environmental scanning
+   • Personnel detection
+   • Hazard identification
+   • Safety zone alerts
+
+4. Crisis Management
+   • Incident assessment
+   • Response coordination
+   • Damage control steps
+   • Team mobilization
+   • Communication plan
+
+5. Recovery Operations
+   • System restoration
+   • Damage assessment
+   • Status reporting
+   • Safety verification
+   • Normal operations restart`,
     
-    "Safety Features": "Critical safety systems and procedures: \n\n1. Emergency Protocols: \n- Emergency stop procedures \n- Fail-safe mechanisms \n- Safety override controls \n- Alert system configuration \n\n2. Obstacle Avoidance: \n- Sensor system overview \n- Avoidance parameters \n- Manual override options \n- Safety zone settings \n\n3. System Limits: \n- Operating boundaries \n- Speed restrictions \n- Power management \n- Environmental constraints",
-    
-    "Maintenance & Updates": "System maintenance procedures: \n\n1. Software Updates: \n- Update checking \n- Installation process \n- Rollback procedures \n- Version management \n\n2. Routine Maintenance: \n- Cleaning procedures \n- Calibration checks \n- Sensor validation \n- System diagnostics \n\n3. Preventive Care: \n- Regular inspections \n- Performance monitoring \n- Component lifetime tracking \n- Maintenance scheduling",
-    
-    "Troubleshooting Guide": "Step-by-step troubleshooting procedures: \n\n1. Connection Issues: \n- Network diagnostics \n- Signal strength optimization \n- Connection recovery steps \n- Alternative connection methods \n\n2. Performance Problems: \n- System resource monitoring \n- Performance optimization \n- Cache clearing procedures \n- Resource management \n\n3. Hardware Issues: \n- Diagnostic procedures \n- Component testing \n- Sensor calibration \n- Reset procedures",
-    
-    "Emergency Procedures": "Critical emergency response information: \n\n1. System Failures: \n- Emergency shutdown procedure \n- Safe mode activation \n- Manual override steps \n- Recovery protocols \n\n2. Safety Incidents: \n- Emergency response steps \n- Incident reporting \n- Safety protocol activation \n- Emergency contact procedures \n\n3. Environmental Hazards: \n- Weather protection \n- Environmental limits \n- Hazard avoidance \n- Emergency shelter procedures",
-    
-    "FAQs": "Comprehensive answers to common questions: \n\n1. Operation Questions: \n- Basic control procedures \n- Feature accessibility \n- System limitations \n- Best practices \n\n2. Technical Questions: \n- System specifications \n- Performance metrics \n- Compatibility information \n- Update procedures \n\n3. Maintenance Questions: \n- Routine care steps \n- Cleaning procedures \n- Component lifetime \n- Replacement guidelines"
+    "FAQs": `Quick Reference Guide:
+
+1. Common Operations
+   • Starting patrols
+   • Emergency handling
+   • Battery management
+   • System monitoring
+   • Alert response
+
+2. Technical Support
+   • Basic troubleshooting
+   • Update installation
+   • Network setup
+   • System recovery
+   • Performance tips
+
+3. Maintenance Tips
+   • Daily checklist
+   • Cleaning guide
+   • Regular upkeep
+   • Service intervals
+   • Component care`
   };
 
   const issueTypes = {
@@ -89,10 +253,19 @@ const Help = () => {
     <SettingsLayout>
       <div className="space-y-8">
         <h2 className="text-2xl font-bold">HELP PAGE</h2>
+
+        {/* FAQ Search */}
+        <div className="space-y-2">
+          <h3 className="text-xl font-semibold">Frequently Asked Questions</h3>
+          <FAQSearch />
+        </div>
         
         <div className="space-y-4">
+          <h3 className="text-xl font-semibold">Help Topics</h3>
           <Accordion type="single" collapsible className="w-full">
-            {Object.entries(helpSections).map(([section, description], index) => (
+            {Object.entries(helpSections)
+              .filter(([section]) => section !== "FAQs") // Remove FAQs section
+              .map(([section, description], index) => (
               <AccordionItem key={index} value={`item-${index}`}>
                 <AccordionTrigger className="text-left font-bold text-lg">
                   {section}
