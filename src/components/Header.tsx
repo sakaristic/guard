@@ -37,7 +37,7 @@ const Header = () => {
           className="h-12 object-contain block dark:hidden"
         />
         <img
-          src="/sakar-dark.png"
+          src="/sakar dark.png"
           alt="Sakar Logo Dark"
           className="h-12 object-contain hidden dark:block"
         />
