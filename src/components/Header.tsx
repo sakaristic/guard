@@ -1,14 +1,56 @@
 import { useState, useEffect } from "react";
 import { Signal, Battery, Circle } from "lucide-react";
+import { socket } from "@/lib/socket";
+import { API_URL } from "@/lib/config";
 
 const Header = () => {
   const [dateTime, setDateTime] = useState(new Date());
+  const [isOnline, setIsOnline] = useState(window.navigator.onLine);
 
   useEffect(() => {
+    // Update clock
     const timer = setInterval(() => {
       setDateTime(new Date());
     }, 1000);
-    return () => clearInterval(timer);
+
+    // Check connection status
+    const checkConnection = async () => {
+      try {
+        // First check WiFi status
+        const statusRes = await fetch(`${API_URL}/wifi/connection`);
+        if (!statusRes.ok) {
+          console.error('WiFi connection check failed:', statusRes.status);
+          setIsOnline(false);
+          return;
+        }
+
+        const data = await statusRes.json();
+        console.log('Connection status:', data);
+
+        // We're online if we have a connected state
+        setIsOnline(data.connected === true);
+      } catch (error) {
+        console.error('Error checking connection:', error);
+        setIsOnline(false);
+      }
+    };
+
+    // Check immediately and then every 3 seconds
+    const connectionInterval = setInterval(checkConnection, 3000);
+    checkConnection();
+
+    // Also listen for real-time WiFi state changes
+    socket.on('wifi_state_change', (state) => {
+      console.log('WiFi state change:', state);
+      checkConnection();
+    });
+
+    // Cleanup
+    return () => {
+      clearInterval(timer);
+      clearInterval(connectionInterval);
+      socket.off('wifi_state_change');
+    };
   }, []);
 
   // Format date as DD/MM/YY
@@ -55,16 +97,15 @@ const Header = () => {
 
       {/* Right Section */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-success/20 rounded-full">
-          <Circle className="w-4 h-4 fill-success text-success" />
-          <span className="text-base text-success font-medium">ONLINE</span>
+        <div className={`flex items-center gap-1.5 px-3 py-1.5 ${isOnline ? 'bg-success/20' : 'bg-destructive/20'} rounded-full`}>
+          <Circle className={`w-4 h-4 ${isOnline ? 'fill-success text-success' : 'fill-destructive text-destructive'}`} />
+          <span className={`text-base font-medium ${isOnline ? 'text-success' : 'text-destructive'}`}>
+            {isOnline ? 'ONLINE' : 'OFFLINE'}
+          </span>
         </div>
 
-        <div className="flex items-center gap-2 px-4 py-2 bg-info/20 rounded-full">
-          <Signal className="w-7 h-7 text-info" />
-          <div className="flex gap-1">
-            
-          </div>
+        <div className={`flex items-center gap-2 px-4 py-2 ${isOnline ? 'bg-info/20' : 'bg-muted/20'} rounded-full`}>
+          <Signal className={`w-7 h-7 ${isOnline ? 'text-info' : 'text-muted-foreground'}`} />
         </div>
 
         <div className="flex items-center gap-2 px-4 py-2 bg-warning/20 rounded-full">
