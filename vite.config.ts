@@ -5,22 +5,11 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: process.env.ELECTRON === 'true' ? './' : '/',
   server: {
-    host: "127.0.0.1", // Only listen on localhost
-    port: 8080,
-    proxy: {
-      // Proxy API requests to local backend
-      '/api': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
-      },
-      // Proxy WebSocket connections
-      '/socket.io': {
-        target: 'http://127.0.0.1:5000',
-        ws: true
-      }
-    }
+    port: 8081,
+    strictPort: true,
+    host: true
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
@@ -28,4 +17,9 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    outDir: 'dist',
+    assetsDir: '.',
+    emptyOutDir: true
+  }
 }));
