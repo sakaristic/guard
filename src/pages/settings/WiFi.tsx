@@ -25,6 +25,33 @@ const WiFiSettings = () => {
   const [showPasswordInput, setShowPasswordInput] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const scanNetworks = async () => {
+    setScanning(true);
+    try {
+      const res = await fetch(`${API_URL}/wifi/scan`);
+      const data = await res.json();
+      
+      // If WiFi is off, clear networks and return
+      if (data.status === "off") {
+        setNetworks([]);
+        setCurrentConnection(null);
+        setIsEnabled(false);
+        return;
+      }
+      
+      setNetworks(data.networks || []);
+      // Only fetch connection if we got networks back
+      if (data.networks && data.networks.length > 0) {
+        await fetchCurrentConnection();
+      }
+    } catch (err) {
+      console.error("Scan failed:", err);
+      setError("Failed to scan networks");
+    } finally {
+      setScanning(false);
+    }
+  };
+
   // WebSocket & initial fetch setup
   useEffect(() => {
     const handleWifiState = (data: any) => {
@@ -123,35 +150,9 @@ const WiFiSettings = () => {
       return;
     }
 
-    const scanNetworks = async () => {
-      setScanning(true);
-      try {
-        const res = await fetch(`${API_URL}/wifi/scan`);
-        const data = await res.json();
-        
-        // If WiFi is off, clear networks and return
-        if (data.status === "off") {
-          setNetworks([]);
-          setCurrentConnection(null);
-          setIsEnabled(false);
-          return;
-        }
-        
-        setNetworks(data.networks || []);
-        // Only fetch connection if we got networks back
-        if (data.networks && data.networks.length > 0) {
-          await fetchCurrentConnection();
-        }
-      } catch (err) {
-        console.error("Scan failed:", err);
-        setError("Failed to scan networks");
-      } finally {
-        setScanning(false);
-      }
-    };
-
     scanNetworks();
-    const interval = setInterval(scanNetworks, 15000);
+    // Set a longer interval for automatic scans (60 seconds)
+    const interval = setInterval(scanNetworks, 60000);
     return () => clearInterval(interval);
   }, [isEnabled]);
 
@@ -286,7 +287,40 @@ const WiFiSettings = () => {
           )}
 
           {/* Network List */}
-          <h3 className="text-xl font-bold">Available Networks</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-bold">Available Networks</h3>
+            {isEnabled && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={scanNetworks}
+                disabled={scanning}
+                className="flex items-center gap-2"
+              >
+                {scanning ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="rotate-90"
+                    >
+                      <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/>
+                    </svg>
+                    <span>Refresh</span>
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
           {!isEnabled ? (
             <p className="text-muted-foreground">Enable WiFi to scan networks</p>
           ) : scanning ? (
