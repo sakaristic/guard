@@ -1,3 +1,14 @@
+"""
+Main Backend Server for Guard Robot System
+
+This module serves as the central control server handling:
+1. Real-time WebSocket communication for system status updates
+2. Hardware control (audio, display brightness, camera)
+3. System monitoring (temperatures, camera status)
+4. Voice chat and Push-to-Talk (PTT) functionality
+5. WiFi connection management
+"""
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -13,10 +24,13 @@ import socketio
 # Setup: Socket.IO + FastAPI
 # --------------------------
 
+# Initialize Socket.IO server for real-time communication
 sio = socketio.AsyncServer(
     async_mode='asgi',
     cors_allowed_origins=['http://127.0.0.1:8080', 'http://localhost:8080']
 )
+
+# Initialize FastAPI application with security settings
 fastapi_app = FastAPI(
     title="Jetson + Device API",
     root_path="",
@@ -24,7 +38,7 @@ fastapi_app = FastAPI(
     openapi_url="/openapi.json"
 )
 
-# CORS middleware - only allow local connections
+# CORS middleware configuration for development
 fastapi_app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://127.0.0.1:8080", "http://localhost:8080", "http://localhost:5173"],

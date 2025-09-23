@@ -1,3 +1,6 @@
+// System Status Dashboard Component
+// Displays real-time monitoring of system health, temperatures, and camera status
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { socket } from "@/lib/socket";
 import { useToast } from "@/components/ui/use-toast";
 
+// Interface defining camera status response structure
 interface CameraStatus {
   connected: boolean;
   status: string;
@@ -20,20 +24,47 @@ interface CameraStatus {
   }>;
 }
 
+// Main SystemStatus component for monitoring system health
 const SystemStatus = () => {
+  // State management for various system metrics and UI elements
   const [showQRModal, setShowQRModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [cameraStatus, setCameraStatus] = useState<CameraStatus | null>(null);
   const [prevCameraState, setPrevCameraState] = useState<string>('');
   const [socketConnected, setSocketConnected] = useState(false);
+  const [dashboardStatus, setDashboardStatus] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
   const [cpuTemp, setCpuTemp] = useState<number | null>(null);
   const [gpuTemp, setGpuTemp] = useState<number | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Handle socket connection status and WiFi updates
+  // Socket connection and WiFi status management
   useEffect(() => {
+    // Check dashboard status
+    const checkDashboardStatus = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/voice-chat/status');
+        if (response.ok) {
+          setDashboardStatus(true);
+          return;
+        }
+        
+        // Try alternative localhost URL
+        const altResponse = await fetch('http://127.0.0.1:5000/voice-chat/status');
+        if (altResponse.ok) {
+          setDashboardStatus(true);
+          return;
+        }
+        
+        setDashboardStatus(false);
+      } catch (error) {
+        console.error('Dashboard status check failed:', error);
+        setDashboardStatus(false);
+      }
+    };
+
+    // Handle socket connection events
     const handleConnect = () => {
       setSocketConnected(true);
       toast({
@@ -53,6 +84,7 @@ const SystemStatus = () => {
       });
     };
 
+    // Fetch camera status from backend
     const fetchCameraStatus = async () => {
       try {
         console.log("Fetching camera status...");
@@ -91,7 +123,7 @@ const SystemStatus = () => {
               toast({
                 title: "Camera Connected",
                 description: "Camera is connected but not streaming",
-                variant: "warning",
+                variant: "default",
                 duration: 3000
               });
             }
@@ -125,13 +157,14 @@ const SystemStatus = () => {
       }
     };
 
+    // Socket event listeners setup
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
 
     // Initial connection status
     setSocketConnected(socket.connected);
 
-    // System temperature monitoring
+    // Temperature monitoring setup
     const fetchTemperatures = async () => {
       try {
         const response = await fetch("http://localhost:5000/system/temperature");
@@ -144,7 +177,7 @@ const SystemStatus = () => {
       }
     };
 
-    // Fetch camera status initially and set up polling
+    // Initial fetches and polling intervals
     fetchCameraStatus();
     const cameraInterval = setInterval(fetchCameraStatus, 5000); // Update every 5 seconds
 
@@ -152,19 +185,29 @@ const SystemStatus = () => {
     const tempInterval = setInterval(fetchTemperatures, 2000); // Update every 2 seconds
     fetchTemperatures(); // Initial fetch
 
+    // Initial checks
+    checkDashboardStatus();
+
+    // Set up polling interval for dashboard status
+    const statusInterval = setInterval(checkDashboardStatus, 5000);
+
+    // Cleanup event listeners and intervals
     return () => {
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
       clearInterval(tempInterval);
       clearInterval(cameraInterval);
+      clearInterval(statusInterval);
     };
   }, [toast, prevCameraState]);
 
+  // Handle successful password entry
   const handlePasswordSuccess = () => {
     setShowPassword(false);
     navigate("/settings/general");
   };
   
+  // Render system status dashboard
   return (
     <div className="w-[1280px] mx-auto bg-background">
       <Header />
@@ -234,11 +277,11 @@ const SystemStatus = () => {
           <Card className="p-6 text-center">
             <CardContent className="p-0">
               <div className="mb-4">
-                <div className={`text-xl font-bold ${socketConnected ? 'text-success' : 'text-destructive'} mb-2`}>
-                  {socketConnected ? 'CONNECTED' : 'DISCONNECTED'}
+                <div className={`text-xl font-bold ${dashboardStatus ? 'text-success' : 'text-destructive'} mb-2`}>
+                  {dashboardStatus ? 'ONLINE' : 'OFFLINE'}
                 </div>
               </div>
-              <p className="text-muted-foreground font-bold">SYSTEM CONNECTION</p>
+              <p className="text-muted-foreground font-bold">DASHBOARD STATUS</p>
             </CardContent>
           </Card>
           

@@ -6,8 +6,6 @@ import { API_URL } from "@/lib/config";
 const Header = () => {
   const [dateTime, setDateTime] = useState(new Date());
   const [isOnline, setIsOnline] = useState(window.navigator.onLine);
-  const [hasInternet, setHasInternet] = useState(true);
-  const [wifiConnected, setWifiConnected] = useState(false);
 
   useEffect(() => {
     // Update clock
@@ -23,15 +21,13 @@ const Header = () => {
         if (!statusRes.ok) {
           console.error('WiFi connection check failed:', statusRes.status);
           setIsOnline(false);
-          setWifiConnected(false);
-          setHasInternet(false);
           return;
         }
 
         const data = await statusRes.json();
-        setWifiConnected(data.connected === true);
+        console.log('Connection status:', data);
 
-        // Check internet connectivity
+        // Check internet connectivity by making a request to a reliable endpoint
         try {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -42,19 +38,17 @@ const Header = () => {
           });
           
           clearTimeout(timeoutId);
-          setHasInternet(true);
-          setIsOnline(true);
+          // If we get here, we have internet connectivity
+          setIsOnline(data.connected === true);
         } catch (error) {
           console.error('Internet connectivity check failed:', error);
-          setHasInternet(false);
           setIsOnline(false);
+          return;
         }
 
       } catch (error) {
         console.error('Error checking connection:', error);
         setIsOnline(false);
-        setWifiConnected(false);
-        setHasInternet(false);
       }
     };
 
@@ -123,7 +117,7 @@ const Header = () => {
         <div className={`flex items-center gap-1.5 px-3 py-1.5 ${isOnline ? 'bg-success/20' : 'bg-destructive/20'} rounded-full`}>
           <Circle className={`w-4 h-4 ${isOnline ? 'fill-success text-success' : 'fill-destructive text-destructive'}`} />
           <span className={`text-base font-medium ${isOnline ? 'text-success' : 'text-destructive'}`}>
-            {isOnline ? 'ONLINE' : wifiConnected && !hasInternet ? 'NO INTERNET' : 'OFFLINE'}
+            {isOnline ? 'ONLINE' : 'OFFLINE'}
           </span>
         </div>
 
