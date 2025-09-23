@@ -3,9 +3,11 @@ const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const isDev = require('electron-is-dev');
 
+let mainWindow = null;
+
 function createWindow() {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     webPreferences: {
@@ -16,20 +18,28 @@ function createWindow() {
   });
 
   // Load the app
-  mainWindow.loadURL(
-    isDev 
-      ? 'http://localhost:8081' // Dev server URL (matches Vite's output)
-      : `file://${path.join(__dirname, '../dist/index.html')}`
-  );
+  const startUrl = isDev 
+    ? 'http://localhost:8081'
+    : `file://${path.join(__dirname, '../dist/index.html')}`;
+
+  mainWindow.loadURL(startUrl).catch(err => {
+    console.error('Failed to load app:', err);
+  });
 
   // Open the DevTools in development.
   if (isDev) {
     mainWindow.webContents.openDevTools();
   }
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
 }
 
 // This method will be called when Electron has finished initialization
-app.whenReady().then(createWindow);
+app.whenReady().then(createWindow).catch(err => {
+  console.error('Failed to create window:', err);
+});
 
 // Quit when all windows are closed.
 app.on('window-all-closed', () => {
@@ -39,7 +49,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
+  if (mainWindow === null) {
     createWindow();
   }
 });
