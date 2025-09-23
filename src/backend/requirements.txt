@@ -4,3 +4,7 @@ screen-brightness-control
 pyalsaaudio
 pydantic
 python-socketio
+# Electron support packages
+pyinstaller
+python-dotenv
+requests
